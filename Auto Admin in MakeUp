@@ -1,0 +1,214 @@
+import os, time, re, uuid, os.path
+from playsound import playsound
+from re import match
+from selenium import webdriver
+from selenium.webdriver.common.alert import Alert
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.common.exceptions import TimeoutException, NoSuchElementException
+from selenium.webdriver.support import expected_conditions as ec
+from selenium.webdriver.firefox.options import Options
+
+def get_role_name(xpath):
+    role_ind = [index for index, item in enumerate(role_list) if re.search(rf'^{take_data(xpath)}.*$', item)]
+    return role_list[role_ind[0]]
+def role_site_data(file, r_s_list):
+    with open(fr'{path}\{file}.txt', encoding='utf-8') as rs_data:
+        for string in rs_data: r_s_list.append(string.strip())
+def play(mp3): playsound(fr'{path}\{lang}\{mp3}.mp3')
+def operation_done(mp3, output): play(mp3); input(f"{output}Enter any...")
+def get_to_site(site_link):
+    firefox_browser.get('https://'+site_link+'/admin.php?dpt=conf&sub=adm_users'); wait_element(5, "//div//input[@id='search_email']")
+def data_input(text): clear(); u_entry = input(text); return u_entry
+def g_e_password():
+    while a == 1:
+        clear(); play('password'); sh_pass = input('1 - Enter password\n2 - Generate password\n\nGenerate or enter password? ')
+        if sh_pass == '1': clear(); pwd = input('Enter password: '); return pwd
+        elif sh_pass == '2': pwd = str(uuid.uuid4())[:8]; return pwd
+        else: play('try'); continue
+def init_site_list(i_s_list):
+    while a == 1:
+        clear(); print('Site list')
+        for sites in range(len(site_list_all)): print(f'{sites+1} - {site_list_all[sites]}')
+        s_number = input(f'\nChosen - {i_s_list}\n\na - choose all sites\n0 - Finish choosing\n\nChoose sites:\n')
+        if re.match('^(2[0-2]|1[0-9]|[1-9])$', s_number):
+            if site_list_all[int(s_number)-1] not in i_s_list: i_s_list.append(site_list_all[int(s_number)-1])
+        elif s_number == '0':
+            if len(i_s_list) == 0: play('list_empty'); continue
+            else: break
+        elif s_number == 'a' or s_number == 'ф': i_s_list = site_list_all.copy(); break
+        else: play('try')
+    return i_s_list
+def process_user(chosen):
+    while a == 1:
+        if chosen == '1': searching_user(user_exist); role_proc(i + 1); break
+        elif chosen == '2': searching_user(user_exist); break
+        elif chosen == '3':
+            clear(); check_role = "//select/option[@selected='selected']"
+            if check_exists(check_role): print(get_role_name(check_role), end=''); operation_done('role_f', '\n\n'); break
+            else: print('None data!\n'); operation_done('role_nf', '\n\n'); break
+        elif chosen == '4':
+            print(f'On site - [{prefix}]:\n\n{email}'); u_role = "//select/option[@selected='selected']"
+            for s_id in ["first_name", "last_name"]: print(take_data("//input[@id='"+s_id+"'][@type='text']"))
+            print(f'{get_role_name(u_role)}\n') if check_exists(u_role) else print('None data!\n'); break
+        elif chosen == '5':
+            send_keys_to_element("//input[@id='cust_password'][@type='password']", password)
+            print(f'Password changed - {prefix}!'); save_changes(); break
+        elif chosen == '0': break
+        else: play('try')
+def take_data(xpath): check = firefox_browser.find_element_by_xpath(xpath); return check.get_attribute("value")
+def check_exists(xpath):
+    try: firefox_browser.find_element(By.XPATH, xpath)
+    except NoSuchElementException: return False
+    return True
+def save_changes(): click_element("//input[@class='btn btn-primary'][@value='Сохранить']"); wait_element(3, "//div[contains(text(), 'Данные успешно сохранены.')]")
+def role_proc(index): click_element("//select[@class='form-control'][@name='group_id']"); click_element("//option[@value='"+data[index]+"']"); save_changes()
+def send_keys_to_element(xpath, keys): firefox_browser.find_element_by_xpath(xpath).send_keys(keys)
+def data_init(f_data, text):
+    data.clear(); print(text); os.system(f_data)
+    with open(f_data, encoding='utf-8') as file:
+        for line in file: data.append(line.strip())
+def wait_element(sleep, xpath): WebDriverWait(firefox_browser, sleep).until(ec.presence_of_element_located((By.XPATH, xpath)))
+def click_element(xpath): firefox_browser.find_element_by_xpath(xpath).click()
+def clear(): os.system('cls')
+def curr_link(): return (re.sub('/admin.*', '', current)).replace('https://', '')
+def searching_user(link_list):
+    if email not in link_list: link_list.append(email)
+    link_list.append(curr_link())
+def full_report(text):
+    if len(user_exist) == 0 and user == 0: clear(); print(f"User [ {email} ] haven't found on any site!")
+    elif len(user_exist) == 0: print(f"\n\nUser [ {email} ] haven't found on any site!")
+    elif len(user_exist) == 0 and user == 0: clear(); print(f"User [ {email} ] haven't found on any site!")
+    elif user == 0 and len(no_user) == 0: clear(); print(f'{text}', end='')
+    elif user != 0 and len(no_user) == 0: print(f'\n\n{text}', end='')
+    elif user == 0 and len(no_user) != 0: clear(); report("User found on sites", user_exist); report("\n\nUser missed on sites", no_user)
+    else: report("\n\nUser found on sites", user_exist); report("\n\nUser missed on sites", no_user)
+def report(text, user_list):
+    print(text, end='')
+    for miss in user_list:
+        if re.match(r'^.*@.*$', miss): print(f' - {miss}:')
+        else: print(f'{miss} ', end='')
+
+email = ''; a = 1; lang = 'English'; i = 0; u_d = 0; password = ''; users = []; data = []; no_user = []; user_exist = []; site_list = []
+site_list_all = []; logged = 0; s_list = []; path = os.path.dirname(os.path.abspath(__file__)); f_path = fr'{path}\data.txt'
+role_list = []; role_site_data('sites', site_list_all); role_site_data('roles', role_list)
+
+languages = ["English", "Russian"]
+while a == 1:
+    clear(); lang_interface = input("Welcome to Admin user processing\n\n1 - English\n2 - Russian\n\n0 - Exit\n\nChoose language of sound interface: ")
+    if re.match('^[12]$', lang_interface): lang = languages[int(lang_interface)-1]; break
+    elif lang_interface == '0': clear(); play('day'); exit()
+    else: clear(); print('1 or 2! [ 1 или 2! ]'); time.sleep(1); continue
+
+clear(); play('login'); wait = 'Processing... Please wait...'
+options = Options(); options.headless = True
+firefox_browser = webdriver.Firefox(options=options, executable_path=fr'{path}\geckodriver.exe')
+
+for s_link in site_list_all:
+    while a == 1:
+        try:
+            firefox_browser.get('https://'+s_link+'/admin.php'); login = "//input[@placeholder='Логин']"; wait_element(10, login)
+            send_keys_to_element(login, 'verzun.aleksey@makeup.com.ua'); send_keys_to_element("//input[@placeholder='Пароль']", 'cbec6eae')
+            click_element("//button[@class='btn btn-primary'][contains(text(), 'Войти')]")
+            wait_element(5, "//a[@class='navbar-brand']"); print(f'Initialized - {s_link}!'); logged += 1; break
+        except NoSuchElementException: print(f'{s_link} lagged!')
+        except TimeoutException: print(f'{s_link} lagged!')
+clear(); play('logged') if len(site_list_all) == logged else play('n_logged')
+
+while a == 1:
+    clear(); choose = input('MakeUp admin\'s\n\n1 - Register new employer\n2 - Process, search users\n\n0 - Exit\n\nChoose how you want work with admin\'s: ')
+    if choose == '1':
+        i = 0; s_list.clear(); site_list = init_site_list(s_list)
+        clear(); data_init(f_path, f'1 - email\n2 - Firstname\n3 - Lastname\n4 - Role'); clear(); u = 0; users.clear()
+        for user in range(int(len(data) / 4)):
+            password = g_e_password(); clear()
+            if len(site_list) != 1: play('S_create')
+            for prefix in site_list:
+                while a == 1:
+                    try:
+                        get_to_site(prefix)
+                        click_element("//div[@class='panel-heading']//a[contains(text(), 'Добавить')]")
+                        user_registration = "//input[@id='Login'][@type='text']"; wait_element(5, user_registration)
+                        email = data[i].lower(); send_keys_to_element(user_registration, email)
+                        send_keys_to_element("//input[@id='cust_password'][@type='password']", password)
+                        send_keys_to_element("//input[@id='Email'][@type='text']", email)
+                        send_keys_to_element("//input[@id='first_name'][@type='text']", data[i+1].capitalize())
+                        send_keys_to_element("//input[@id='last_name'][@type='text']", data[i+2].capitalize())
+                        save_changes(); role_proc(i+3); print(f'{email} - registered! [{prefix}]'); break
+                    except TimeoutException:
+                        if check_exists("//div[contains(text(), 'Не удалось!')]"):
+                            current = firefox_browser.current_url
+                            searching_user(user_exist); print(f'{email} exist - {prefix}!'); break
+                        else: print(f'Lags!'); continue
+                    except NoSuchElementException: continue
+                    except KeyboardInterrupt: play('day'); firefox_browser.quit()
+            i += 4; users.append(email); users.append(password)
+        if (len(user_exist)-1) != len(site_list):
+            clear(); print("Login - password:\n")
+            for i in range(int(len(users)/2)): print(f"{users[u]} - {users[u+1]}"); u += 2
+            operation_done('created', '\n')
+        else: clear(); print(f'User {email} exists on each site!', end=''); operation_done('exist', '\n\n')
+    elif choose == '2':
+        while a == 1:
+            i = 0; clear(); chosen_user = input("List\n\n1 - Role processing\n2 - Search employer\n3 - Check role\n4 - Take current user data\n5 - Patch password\n6 - Delete user\n\n0 - Exit\n\nChoose: ")
+            if re.match('^[0-6]$', chosen_user):
+                if re.match('^[1246]$', chosen_user):
+                    s_list.clear(); site_list = init_site_list(s_list); clear()
+                    for role in role_list: print(role)
+                    data_init(f_path, f"\nEnter email and role[number]:\n\n1 - e-mail\n2 - Role"); clear()
+                    if chosen_user == '1' and len(site_list) != 1: play('role_st')
+                    elif chosen_user == '2' and len(site_list) != 1: play('searching_st')
+                    elif chosen_user == '4' and len(site_list) != 1: play('collection_st')
+                elif chosen_user == '0': break
+                else:
+                    if chosen_user == '3':
+                        mail = data_input('Enter e-mail: '); email = mail.lower(); clear(); print('Link list\n')
+                        for site in range(len(site_list_all)): print(f'{site + 1} - {site_list_all[site]}')
+                        link = input(f'\nChoose link: '); site_list.clear(); site_list.append(site_list_all[int(link)-1])
+                    elif chosen_user == '5':
+                        password = g_e_password(); mail = data_input('Enter e-mail: '); email = mail.lower()
+                        s_list.clear(); site_list = init_site_list(s_list); clear()
+                clear(); print(wait) if chosen_user not in ["4", "6"] else print('Complete!\n')
+                if chosen_user == '1': u_range = int(len(data) / 2)
+                elif re.match('^[246]$', chosen_user): u_range = len(data)
+                else: u_range = 1
+                for user in range(u_range):
+                    user_exist.clear(); no_user.clear()
+                    for prefix in site_list:
+                        while a == 1:
+                            try:
+                                get_to_site(prefix)
+                                if re.match('^[1246]$', chosen_user): email = data[i].lower()
+                                send_keys_to_element("//div//input[@id='search_email']", email)
+                                click_element("//div[@class='btn-group btn-group-sm']//button[contains(text(), 'Найти ')]")
+                                if chosen_user == '6':
+                                    delete_user = "//tr//td[contains(text(), '"+email+"')]//..//i[@class='glyphicon glyphicon-remove']"
+                                    wait_element(2, delete_user); click_element(delete_user)
+                                    WebDriverWait(firefox_browser, 2).until(ec.alert_is_present())
+                                    Alert(firefox_browser).accept(); wait_element(10, "//div[contains(text(), 'Успешно удалено')]")
+                                    if check_exists("//div[contains(text(), 'Успешно удалено')]"):
+                                        print(f"{email} - Deleted! [{prefix}]"); searching_user(user_exist); break
+                                else:
+                                    search_email = "//tr//td[contains(text(), '" + email + "')]//..//i[@class='glyphicon glyphicon-edit']"
+                                    wait_element(2, search_email); click_element(search_email); current = firefox_browser.current_url
+                                    wait_element(5, "//div//label[@for='Login']"); process_user(chosen_user); break
+                            except TimeoutException:
+                                current = firefox_browser.current_url
+                                if re.match(r'^.*adm_users$', current) and check_exists("//i[@class='glyphicon glyphicon-edit']") is not True: searching_user(no_user); break
+                                elif check_exists("//i[@class='glyphicon glyphicon-remove']") is False: searching_user(no_user); break
+                                else: click_element("//i[@class='glyphicon glyphicon-edit']"); process_user(chosen_user); break
+                            except KeyboardInterrupt: play('day'); firefox_browser.quit()
+                            except NoSuchElementException: continue
+                    if chosen_user == '1': full_report(f"{email} Complete!"); i += 2
+                    elif chosen_user == '2': full_report(f'{email} - Found on each site!'); i += 1
+                    elif chosen_user == '4': i += 1
+                    elif chosen_user == '5': clear(); print(f'New password - {password}')
+                    elif chosen_user == '6': i += 1
+                if chosen_user == '1': operation_done('role_c', '\n\n')
+                elif chosen_user == '2': operation_done('searching_done', '\n\n')
+                elif chosen_user == '4': operation_done('collection_done', '')
+                elif chosen_user == '5': operation_done('change_pass_done', '\n')
+                elif chosen_user == '6': operation_done('deleted', '\n')
+            else: play('try')
+    elif choose == '0': clear(); play('day'); firefox_browser.quit(); exit()
+    else: play('try')
