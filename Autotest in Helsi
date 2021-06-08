@@ -1,0 +1,70 @@
+import os, time, json, re
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException, TimeoutException, ElementClickInterceptedException
+from selenium.webdriver.firefox.options import Options
+
+options = Options(); options.headless = False
+firefox_browser = webdriver.Firefox(options=options, executable_path=r'./geckodriver.exe')
+data_path = './Org_list.txt'; org_list = open(data_path, encoding = 'utf-8'); os.system(data_path)
+all_org = len(open(data_path).readlines()); a = 1; v_org = 0; types = ["Primary", "Secondary", "Custom", "Boocking"]
+
+def clear(): os.system('cls')
+def logs(reason): um = open('Logs.txt', 'a'); um.write(time.strftime("%A %d.%m, %X", time.localtime()) + ' - ' + org.strip() + ' - ' + reason + '\n'); um.close()
+def UM(): firefox_browser.get('')
+def system_failed():
+    if check_exists("//input[@id='email']") == True: logIn(); logs('unLogIn')
+    else: UM(); logs('Lag')
+def init_json(type): read_file = open('./ + '.json', "r"); data = json.load(read_file); clear(); print('Processing...'); return data
+def wait_element(time, xpath): WebDriverWait(firefox_browser, time).until(EC.presence_of_element_located((By.XPATH, xpath)))
+def check_exists(xpath):
+    try: firefox_browser.find_element(By.XPATH, xpath)
+    except NoSuchElementException: return False
+    return True
+def logIn():
+    firefox_browser.get('https://qa3id.helsi.pro'); wait_element(10, "//input[@id='email']")
+    firefox_browser.find_element_by_id('email').send_keys('')
+    firefox_browser.find_element_by_id('usercreds').send_keys('')
+    firefox_browser.find_element_by_class_name('btn').click()
+    wait_element(10, "//h2[text()=' Домашня сторінка ']"); UM()
+
+while a == 1:
+    clear(); org_type = input('Choose organization type\n\n1 - Primary\n2 - Secondary\n3 - Custom\n4 - Boocking\n\n0 - Exit\n')
+    if re.match(r'^[1-4]$', org_type): data = init_json(types[int(org_type)-1]); break
+    elif org_type == '0': clear(); exit()
+    else: clear(); print('Try again!'); time.sleep(1)
+
+started = time.strftime("%A %d.%m, %X", time.localtime()); logIn()
+for org in org_list:
+    while a == 1:
+        try:
+            wait_element(10, "//div[@class='Select-value']//span[@aria-selected='true']")
+            org_search = firefox_browser.find_element(By.XPATH, "//input[@id='Organization']")
+            org_search.send_keys(org); org_search.send_keys(u'\ue007')
+            for group in data:
+                while check_exists ("//input[@id='search'][@value='"+group+"']") == False:
+                    wait_element(10, "//input[@id='search']")
+                    search = firefox_browser.find_element_by_id('search'); search.clear()
+                    for s in group: search.send_keys(s)
+                time.sleep(2)
+                if check_exists("//tr//span[text()='"+group+"']") == False: break
+                firefox_browser.find_element_by_xpath("//span[@id='editservicebutton']").click()
+                for menu in data[group].keys():
+                    wait_element(10, "//div[@class='user-story-component-header '][text()='"+menu+"']")
+                    firefox_browser.find_element_by_xpath("//div[@class='user-story-component-header '][text()='"+menu+"']").click()
+                    for access, value in data[group][menu].items():
+                        checked = check_exists("//div[@class='user-story-component-checkbox-container'][text()='"+access+"']//div[contains(@class,'checked')]")
+                        access = firefox_browser.find_element_by_xpath("//div[@class='user-story-component-checkbox-container'][text()='"+access+"']")
+                        if value == False:
+                            if checked == True: access.click()
+                        elif value == True:
+                            if checked == False: access.click()
+                    firefox_browser.find_element_by_xpath("//div[contains(@class,'user-story-component-header_isOpen')]").click()
+                firefox_browser.find_element_by_xpath("//button[@id='saveChanges'][text()='Зберегти']").click()
+            v_org+=1; clear(); print(f'Started at {started}\n\nCompleted {v_org}, left {all_org - v_org}. Last used - {org.strip()}'); logs('Finished'); break
+        except TimeoutException: system_failed()
+        except ElementClickInterceptedException: system_failed()
+        except NoSuchElementException: system_failed()
+print(f'\nFinished at {time.strftime("%A %d.%m, %X", time.localtime())}'); firefox_browser.quit()
