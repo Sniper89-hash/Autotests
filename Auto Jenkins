@@ -1,0 +1,82 @@
+import os, time, re
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.common.exceptions import NoSuchElementException
+from selenium.webdriver.firefox.options import Options
+
+options = Options(); options.headless = False
+firefox_browser = webdriver.Firefox(options=options, executable_path=r'C:\Users\Dark\Python\geckodriver.exe')
+firefox_browser.maximize_window()
+ip_list = []; a=1; ipv4='IP-address'; platform = [ 'Build with Parameters', 'Собрать с параметрами' ]
+jobs = [ 'z_OpenIP', 'Unlock IP', 'z_CloseIP' ]; jenkins = [ 'jenkins', 'deploy' ]
+
+def clear(): os.system('cls')
+def try_again(): clear(); print('Try again!'); time.sleep(2)
+def j_main(j_num): switch_to(j_num); firefox_browser.get('https://' + jenkins[int(j_num)] + '.helsi.pro')
+def wait_element(time, xpath): WebDriverWait(firefox_browser, time).until(EC.presence_of_element_located((By.XPATH, xpath)))
+def switch_to(plat_HS): firefox_browser.switch_to.window(firefox_browser.window_handles[plat_HS])
+def init_array(file, data):
+    f_path = 'C:\\Users\\Dark\\Python\\' + file + '.txt'
+    os.system(f_path); file_data = open(f_path); ip_list.clear()
+    for i in file_data: data.append(i.strip())
+    file_data.close()
+    return data
+def check_exists(xpath):
+    try: firefox_browser.find_element(By.XPATH, xpath)
+    except NoSuchElementException: return False
+    return True
+def init_ip(reason):
+    while a == 1:
+        clear(); ch_ip = input(reason + '\n\n1 - One ' + ipv4 + '\n2 - Many ' + ipv4 + 'es\n\n0 - Exit\n')
+        if ch_ip == '1': clear(); ip = input('Enter ' + ipv4 + ':\n'); ip_list.clear(); ip_list.append(ip); break
+        elif ch_ip == '2': init_array('IP', ip_list); break
+        elif ch_ip == '0': break
+        else: try_again()
+def initialization():
+    firefox_browser.execute_script("window.open()")
+    j_main(0); logIn('Alex', 'darkhelsi2019'); j_main(1); logIn('a.verzun@helsi.me', '42GYdQGXDC')
+def logIn(login, password):
+    wait_element(5, "//input[@id='j_username']")
+    firefox_browser.find_element_by_id('j_username').send_keys(login)
+    firefox_browser.find_element_by_name('j_password').send_keys(password)
+    firefox_browser.find_element_by_id('yui-gen1-button').click()
+def processing_IP(job, plat, reason):
+    firefox_browser.find_element_by_partial_link_text(jobs[int(job)]).click()
+    for i in range(len(ip_list)):
+        wait_element(5, "//a[@class='task-link'][text()='" + platform[int(plat)] + "']")
+        firefox_browser.find_element_by_partial_link_text(platform[int(plat)]).click()
+        if reason == 'a': firefox_browser.find_element_by_name('value').send_keys('a')
+        firefox_browser.find_element_by_class_name('setting-input').send_keys(ip_list[i])
+        firefox_browser.find_element_by_id('yui-gen1-button').click()
+        wait_element(5, "//a[@class='task-link'][text()='" + platform[int(plat)] + "']")
+    clear(); print('Processing... Please wait...')
+def job_processing_IP(ip_reason, j_job, j_reason):
+    while a == 1:
+            clear(); acc_choose = input(f'{ip_reason} Access\n\n1 - {ip_reason} Access to helsi.pro\n2 - {ip_reason} Access to study.helsi.pro\n3 - {ip_reason} Access to both\n\n0 - Exit\n\nChoose option:\n');
+            if acc_choose == '1': switch_to(1); processing_IP(j_job, 1, j_reason)
+            elif acc_choose == '2': switch_to(0); processing_IP(j_job, 0, j_reason)
+            elif acc_choose == '3':
+                switch_to(0); processing_IP(j_job, 0, j_reason)
+                switch_to(1); processing_IP(j_job, 1, j_reason)
+            elif acc_choose == '0': j_main(0); j_main(1); break
+
+initialization(); init_ip('Connection initialized!')
+while a == 1:
+    try:
+        clear(); menu_ch = input(ipv4 + ' confirmed.\n\n1 - Open Access & Check Access\n2 - Unlock\n3 - Lock Access\n4 - Change ' + ipv4 +'\n\n0 - Exit\n\nChoose option:\n')
+        if menu_ch == '1':
+            while a == 1:
+                clear(); menu_a = input('Open Access & Check Access\n\n1 - Open Access\n2 - Check Access\n\n0 - Exit\n')
+                if menu_a == '1': job_processing_IP('Open', 0, 'a')
+                elif menu_a == '2': job_processing_IP('Check', 0, 'c')
+                elif menu_a == '0': break
+                else: try_again()
+        elif menu_ch == '2': job_processing_IP('Unlock', 1, '')
+        elif menu_ch == '3': job_processing_IP('Lock', 2, '')
+        elif menu_ch == '4': init_ip('Change IP-address or IP list')
+        elif menu_ch == '0': clear(); print('Have a nice day!'); time.sleep(2); firefox_browser.quit(); clear(); exit()
+        else: try_again()
+    except NoSuchElementException:
+        if check_exists("//input[@id='j_username']"): logIn('Alex', 'darkhelsi2019')
