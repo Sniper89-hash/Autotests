@@ -7,14 +7,14 @@ from selenium.common.exceptions import NoSuchElementException
 from selenium.webdriver.firefox.options import Options
 
 options = Options(); options.headless = False
-firefox_browser = webdriver.Firefox(options=options, executable_path=r'C:\Users\Dark\Python\geckodriver.exe')
+firefox_browser = webdriver.Firefox(options=options, executable_path=r'./geckodriver.exe')
 firefox_browser.maximize_window()
 ip_list = []; a=1; ipv4='IP-address'; platform = [ 'Build with Parameters', 'Собрать с параметрами' ]
 jobs = [ 'z_OpenIP', 'Unlock IP', 'z_CloseIP' ]; jenkins = [ 'jenkins', 'deploy' ]
 
 def clear(): os.system('cls')
 def try_again(): clear(); print('Try again!'); time.sleep(2)
-def j_main(j_num): switch_to(j_num); firefox_browser.get('https://' + jenkins[int(j_num)] + '.helsi.pro')
+def j_main(j_num): switch_to(j_num); firefox_browser.get('https://' + jenkins[int(j_num)] + 'link')
 def wait_element(time, xpath): WebDriverWait(firefox_browser, time).until(EC.presence_of_element_located((By.XPATH, xpath)))
 def switch_to(plat_HS): firefox_browser.switch_to.window(firefox_browser.window_handles[plat_HS])
 def init_array(file, data):
@@ -36,7 +36,7 @@ def init_ip(reason):
         else: try_again()
 def initialization():
     firefox_browser.execute_script("window.open()")
-    j_main(0); logIn('Alex', 'darkhelsi2019'); j_main(1); logIn('a.verzun@helsi.me', '42GYdQGXDC')
+    j_main(0); logIn('', ''); j_main(1); logIn('', '')
 def logIn(login, password):
     wait_element(5, "//input[@id='j_username']")
     firefox_browser.find_element_by_id('j_username').send_keys(login)
